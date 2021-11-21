@@ -1,10 +1,19 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ClientModule } from './client/client.module';
 
 @Module({
-  imports: [ClientModule],
+  imports: [
+    ConfigModule.forRoot({
+      envFilePath: ['.env.development'],
+      isGlobal: true,
+    }),
+    MongooseModule.forRoot(process.env.URI_MONGODB),
+    ClientModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

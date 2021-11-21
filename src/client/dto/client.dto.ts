@@ -3,25 +3,33 @@ import { IsArray, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 export class ClientDTO {
   @IsNotEmpty()
   @IsString()
-  name: string;
+  readonly name: string;
 
   @IsNotEmpty()
   @IsString()
-  codeId: string;
-
-  @IsNotEmpty()
-  @IsNumber()
-  tributeID: number;
+  readonly codeID: string;
 
   @IsNotEmpty()
   @IsString()
-  currency: string;
+  readonly tributeID: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly currency: string;
 
   @IsNotEmpty()
   @IsNumber()
-  monthlyCall: number;
+  readonly monthlyCall: number;
 
   @IsNotEmpty()
   @IsArray()
-  bank: number[];
+  readonly bank: number[];
+}
+
+export class ValidationClientDTO {
+  @IsNotEmpty()
+  readonly client: ClientDTO;
+  @IsNotEmpty()
+  @IsString()
+  readonly token: string;
 }
