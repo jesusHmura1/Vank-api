@@ -1,7 +1,7 @@
 export interface ClientI {
   name: string;
-  codeId: string;
-  tributeID: number;
+  codeID: string;
+  tributeID: string;
   currency: string;
   monthlyCall: number;
   bank: number[];
@@ -10,4 +10,5 @@ export interface ClientI {
 
 export interface ClientIStatus {
   message: string;
+  client?: ClientI;
 }

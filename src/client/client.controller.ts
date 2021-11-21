@@ -1,13 +1,13 @@
-import { Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
 import { ClientService } from './client.service';
-import { ClientDTO } from './dto/client.dto';
+import { ValidationClientDTO } from './dto/client.dto';
 
 @Controller('client')
 export class ClientController {
-  constructor(private readonly ClientService: ClientService) {}
+  constructor(private readonly clientService: ClientService) {}
 
   @Post()
-  CreateClient(ClientDTO: ClientDTO) {
-    return this.ClientService.create(ClientDTO);
+  CreateClient(@Body() clientDTO: ValidationClientDTO) {
+    return this.clientService.create(clientDTO);
   }
 }
