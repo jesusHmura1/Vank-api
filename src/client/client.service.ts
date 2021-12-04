@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Model } from 'mongoose';
 import { VANKCLIENT } from 'src/common/models/models';
 import { InjectModel } from '@nestjs/mongoose';
+import { editClientDto, editClientSimpleDto } from './dto/update.client.dto';
 
 @Injectable()
 export class ClientService {
@@ -15,26 +16,37 @@ export class ClientService {
   async create(
     validationClientDTO: ValidationClientDTO,
   ): Promise<ClientIStatus> {
-    const currencyCase: string[] = ['CLP', 'USD', 'EUR'];
-    if (currencyCase.includes(validationClientDTO.client.currency)) {
-      if (validationClientDTO.token !== '1') {
-        const status: ClientIStatus = { message: 'no tiene permisos' };
-        return status;
-      }
-      const client = {
-        id: uuidv4(),
-        ...validationClientDTO.client,
-      };
-      const newClient = new this.model({ ...client });
-      const newClientCreate = await newClient.save();
-      const status: ClientIStatus = {
-        message: 'nuevo cliente creado con exito',
-        client: newClientCreate,
-      };
-      return status;
-    } else {
-      const status: ClientIStatus = { message: 'currency not valid' };
+    let status: ClientIStatus;
+    if (validationClientDTO.token !== '1') {
+      const status = { message: 'no tiene permisos' };
       return status;
     }
+    const client = {
+      id: uuidv4(),
+      ...validationClientDTO.client,
+    };
+    const newClient = new this.model({ ...client });
+    try {
+      await newClient.save();
+      status = {
+        message: 'nuevo cliente creado con exito',
+      };
+    } catch {
+      status = {
+        message: 'No se pudo crear a el nuevo cliente',
+      };
+    }
+    return status;
+  }
+
+  async update(
+    id: string,
+    clientUpdate: editClientSimpleDto,
+  ): Promise<ClientI> {
+    return await this.model.findByIdAndUpdate(id, clientUpdate, { new: true });
+  }
+
+  async findAll(): Promise<ClientI[]> {
+    return await this.model.find();
   }
 }
