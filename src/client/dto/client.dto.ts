@@ -1,12 +1,10 @@
 import {
   IsArray,
-  IsEnum,
+  IsCurrency,
   IsNotEmpty,
   IsNumber,
   IsString,
 } from 'class-validator';
-import { enumToString } from 'src/helpers/enumToString';
-import { CurrencyType } from '../enums';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ClientDTO {
@@ -27,12 +25,8 @@ export class ClientDTO {
 
   @ApiProperty()
   @IsNotEmpty()
-  @IsEnum(CurrencyType, {
-    message: `Categoria no valida, las categorias validas son: ${enumToString(
-      CurrencyType,
-    )}`,
-  })
-  readonly currency: CurrencyType;
+  @IsCurrency()
+  readonly currency: string;
 
   @ApiProperty()
   @IsNotEmpty()
