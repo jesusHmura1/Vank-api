@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Model } from 'mongoose';
 import { VANKCLIENT } from 'src/common/models/models';
 import { InjectModel } from '@nestjs/mongoose';
-import { editClientDto, editClientSimpleDto } from './dto/update.client.dto';
+import { editClientSimpleDto } from './dto/update.client.dto';
 
 @Injectable()
 export class ClientService {

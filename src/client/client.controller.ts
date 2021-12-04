@@ -5,7 +5,7 @@ import { ValidationClientDTO } from './dto/client.dto';
 import { editClientSimpleDto } from './dto/update.client.dto';
 
 @ApiTags('Client')
-@Controller('client')
+@Controller('api/v1/client')
 export class ClientController {
   constructor(private readonly clientService: ClientService) {}
 

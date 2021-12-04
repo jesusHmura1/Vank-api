@@ -4,6 +4,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ClientModule } from './client/client.module';
+import { ScheduleModule } from './schedule/schedule.module';
+import { InvoicesModule } from './invoices/invoices.module';
 
 @Module({
   imports: [
@@ -13,6 +15,8 @@ import { ClientModule } from './client/client.module';
     }),
     MongooseModule.forRoot(process.env.URI_MONGODB),
     ClientModule,
+    ScheduleModule,
+    InvoicesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

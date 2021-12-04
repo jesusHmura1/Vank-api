@@ -12,4 +12,4 @@ export const ClientSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-ClientSchema.index({ username: 1 }, { unique: true });
+ClientSchema.index({ name: 1 }, { unique: true });
