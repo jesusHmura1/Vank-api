@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { InvoicesI, InvoicesI } from 'src/common/interface/invoices.interfaces';
+import { InvoicesI } from 'src/common/interface/invoices.interfaces';
 import { VANKINVOICES } from 'src/common/models/models';
 import { InvoiceDTO } from './dto/invoces.dto';
 import * as fs from 'fs';
@@ -16,8 +16,13 @@ export class InvoicesService {
     @InjectModel(VANKINVOICES.name) private readonly model: Model<InvoicesI>,
   ) {}
 
-  public generateInvoicesFromCSV() {
-    return;
+  async generateInvoicesFromCSV() {
+    const file = 'invoice.csv';
+    const filePath = __dirname + '/document/' + file;
+    const total: number = await this.createReadStreamAndUploadToMongoDB(
+      filePath,
+    );
+    this.logger.log(`${total} documento ingresados con exito`);
   }
 
   async created(invoceDTO: InvoiceDTO): Promise<InvoicesI> {
@@ -44,7 +49,6 @@ export class InvoicesService {
   }
 
   async saveRecord(file: Express.Multer.File): Promise<any> {
-    console.log(file);
     const filePath = __dirname + '/document/' + file.originalname;
     if (!file.originalname.endsWith('.csv')) {
       throw new BadRequestException('File must be csv');
@@ -52,7 +56,6 @@ export class InvoicesService {
     const total: number = await this.createReadStreamAndUploadToMongoDB(
       filePath,
     );
-
     return `documento ingresados ${total} con exito`;
   }
 
@@ -64,37 +67,28 @@ export class InvoicesService {
       .createReadStream(filePath)
       .pipe(csv())
       .on('data', async (row: InvoiceReport) => {
-        console.log(row);
-        if (dataList.length < 4) {
+        if (dataList.length < 100) {
           dataList.push(row);
         } else {
           stream.pause();
-          console.log('la lista es:', dataList);
           const result = await this.model
             .insertMany(dataList, { ordered: false })
             .catch(async (e) => {
-              console.log('ingrese al catch');
-              console.log(e);
               if (e.code === 11000) {
                 // 1- getting duplicates
-                console.log('getting duplicates');
-
-                const invoices: InvoiceDTO[] = [];
                 const InvoicesIDs = e.result.result.writeErrors.map((error) => {
                   const parsedError = JSON.stringify(error);
-                  console.log(parsedError);
                   const invoice = JSON.parse(parsedError).op;
-                  invoices.push(invoice);
+
                   return invoice.INVOICE_ID;
                 });
-                console.log('los duplicados son:', InvoicesIDs);
                 // 2- removing old duplicates.
                 await this.model.deleteMany({
                   orderID: { $in: InvoicesIDs },
                 });
                 // 3- adding the orders
                 try {
-                  await this.model.insertMany(invoices, {
+                  await this.model.insertMany(dataList, {
                     ordered: false,
                   });
                   return Promise.resolve('Data Inserted');
@@ -117,10 +111,32 @@ export class InvoicesService {
     });
 
     await end;
-    await this.model.insertMany(dataList).catch((e) => {
-      console.log(e);
-      throw new BadRequestException('Invalid CSV');
-    });
+    await this.model
+      .insertMany(dataList, { ordered: false })
+      .catch(async (e) => {
+        if (e.code === 11000) {
+          // 1- getting duplicates
+          const InvoicesIDs = e.result.result.writeErrors.map((error) => {
+            const parsedError = JSON.stringify(error);
+            const invoice = JSON.parse(parsedError).op;
+            return invoice.INVOICE_ID;
+          });
+          // 2- removing old duplicates.
+          await this.model.deleteMany({
+            orderID: { $in: InvoicesIDs },
+          });
+
+          // 3- adding the orders
+          try {
+            await this.model.insertMany(dataList, {
+              ordered: false,
+            });
+            return Promise.resolve('Data Inserted');
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        } else return Promise.reject(e);
+      });
     total += dataList.length;
     return total;
   }
@@ -152,7 +168,7 @@ export class InvoicesService {
     } else {
       //creamos los recordsI los agregamos y los enviamos
     }
-    return;
+    return record;
   }
 
   private removeFile(path: string) {
