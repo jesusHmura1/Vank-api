@@ -13,6 +13,8 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { InvoicesI } from 'src/common/interface/invoices.interfaces';
+import { RecordsI } from 'src/common/interface/records.interface';
 import { InvoiceDTO } from './dto/invoces.dto';
 import { InvoiceReportDTO } from './dto/invoice.report.dto';
 import { InvoicesService } from './invoices.service';
@@ -48,22 +50,22 @@ export class InvoicesController {
   }
 
   @Get('/report')
-  async getReport(@Query() params: InvoiceReportDTO) {
+  async getReport(@Query() params: InvoiceReportDTO): Promise<RecordsI[]> {
     return this.invoceService.getRecord(params);
   }
 
   @Get()
-  FindAllInvoices() {
+  FindAllInvoices(): Promise<InvoicesI[]> {
     return this.invoceService.findAll();
   }
 
   @Get(':id')
-  FindByID(@Param('id', ParseIntPipe) id: number) {
+  FindByID(@Param('id', ParseIntPipe) id: number): Promise<InvoicesI> {
     return this.invoceService.findById(id);
   }
 
   @Get('invoice/:id')
-  FindByIDInvoice(@Param('id', ParseIntPipe) id: number) {
+  FindByIDInvoice(@Param('id', ParseIntPipe) id: number): Promise<InvoicesI> {
     return this.invoceService.findByInvoiceId(id);
   }
 
@@ -71,7 +73,7 @@ export class InvoicesController {
   updateInvoice(
     @Param('id', ParseIntPipe) id: number,
     @Body() invoicesDTO: InvoiceDTO,
-  ) {
+  ): Promise<InvoicesI> {
     return this.invoceService.update(id, invoicesDTO);
   }
 
