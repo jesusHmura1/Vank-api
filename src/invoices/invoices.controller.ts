@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Post,
   Put,
   Query,
@@ -11,8 +12,9 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { InvoiceDTO } from './dto/invoces.dto';
+import { InvoiceReportDTO } from './dto/invoice.report.dto';
 import { InvoicesService } from './invoices.service';
 
 @ApiTags('Invoices')
@@ -45,14 +47,9 @@ export class InvoicesController {
     return this.invoceService.saveRecord(file);
   }
 
-  @Get('invoirce/report')
-  async getReport(
-    @Query('vendor') vendor?: number,
-    @Query('startDate') startDate?: Date,
-    @Query('endDate') endDate?: Date,
-    @Query('currency') currency?: string,
-  ) {
-    return this.invoceService.getRecord(vendor, startDate, endDate, currency);
+  @Get('/report')
+  async getReport(@Query() params: InvoiceReportDTO) {
+    return this.invoceService.getRecord(params);
   }
 
   @Get()
@@ -61,22 +58,25 @@ export class InvoicesController {
   }
 
   @Get(':id')
-  FindByID(@Param('id') id: number) {
+  FindByID(@Param('id', ParseIntPipe) id: number) {
     return this.invoceService.findById(id);
   }
 
   @Get('invoice/:id')
-  FindByIDInvoice(@Param('id') id: number) {
+  FindByIDInvoice(@Param('id', ParseIntPipe) id: number) {
     return this.invoceService.findByInvoiceId(id);
   }
 
   @Put(':id')
-  updateInvoice(@Param('id') id: number, @Body() invoicesDTO: InvoiceDTO) {
+  updateInvoice(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() invoicesDTO: InvoiceDTO,
+  ) {
     return this.invoceService.update(id, invoicesDTO);
   }
 
   @Delete(':id')
-  DeletedInvoice(@Param('id') id: number) {
+  DeletedInvoice(@Param('id', ParseIntPipe) id: number) {
     return this.invoceService.deleted(id);
   }
 }

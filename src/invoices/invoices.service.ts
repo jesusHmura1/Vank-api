@@ -8,6 +8,8 @@ import * as fs from 'fs';
 import * as csv from 'csv-parser';
 import { InvoiceReport } from './entity/invoice.entity';
 import { RecordsI } from 'src/common/interface/records.interface';
+import { InvoiceReportDTO } from './dto/invoice.report.dto';
+import axios from 'axios';
 
 @Injectable()
 export class InvoicesService {
@@ -16,7 +18,45 @@ export class InvoicesService {
     @InjectModel(VANKINVOICES.name) private readonly model: Model<InvoicesI>,
   ) {}
 
-  async generateInvoicesFromCSV() {
+  async convertCurrency(amount, fromCurrency, toCurrency): Promise<any> {
+    const apiKey = process.env.API_KEY;
+
+    fromCurrency = encodeURIComponent(fromCurrency);
+    toCurrency = encodeURIComponent(toCurrency);
+    const query = fromCurrency + '_' + toCurrency;
+
+    const url = `https://api.currconv.com/api/v7/convert?q=${query}&compact=ultra&apiKey=${apiKey}`;
+    console.log(url);
+
+    const { data } = await axios.get(url);
+    console.log(data);
+
+    let body = '';
+    data.on('data', function (chunk) {
+      body += chunk;
+    });
+
+    data.on('end', function () {
+      try {
+        const jsonObj = JSON.parse(body);
+
+        const val = jsonObj[query];
+        if (val) {
+          const total = val * amount;
+          return Math.round(total * 100) / 100;
+        } else {
+          const err = new Error('Value not found for ' + query);
+          console.log(err);
+          this.logger.log(`parser error: ${err}`);
+        }
+      } catch (e) {
+        console.log('Parse error: ', e);
+        this.logger.log(`parser error: ${e}`);
+      }
+    });
+  }
+
+  async generateInvoicesFromCSV(): Promise<any> {
     const file = 'invoice.csv';
     const filePath = __dirname + '/document/' + file;
     const total: number = await this.createReadStreamAndUploadToMongoDB(
@@ -56,10 +96,10 @@ export class InvoicesService {
     const total: number = await this.createReadStreamAndUploadToMongoDB(
       filePath,
     );
-    return `documento ingresados ${total} con exito`;
+    return `${total} documento ingresados con exito`;
   }
 
-  async createReadStreamAndUploadToMongoDB(filePath: string) {
+  async createReadStreamAndUploadToMongoDB(filePath: string): Promise<number> {
     const dataList: InvoiceReport[] = [];
     let total = 0;
 
@@ -141,41 +181,66 @@ export class InvoicesService {
     return total;
   }
 
-  async getRecord(
-    invoce?: number,
-    startDate?: Date,
-    endDate?: Date,
-    currency?: string,
-  ): Promise<RecordsI[]> {
-    this.logger.log(`startDate: ${startDate}, endDate: ${endDate}`);
-    const record: RecordsI[] = [];
-    let data;
-    if (invoce) {
-      data = this.model.find({
-        INVOICE_ID: invoce ? invoce : null,
+  async getRecord(params: InvoiceReportDTO): Promise<RecordsI[]> {
+    this.logger.log(
+      `startDate: ${params.startDate}, endDate: ${params.endDate}, invoce: ${params.invoiceID}, currency: ${params.currency}`,
+    );
+    const records: RecordsI[] = [];
+    let data: InvoicesI[];
+    if (params.invoiceID && !params.endDate && !params.startDate) {
+      const idInvoice = Number(params.invoiceID);
+      data = await this.model.find({
+        VENDOR_ID: idInvoice,
       });
     } else {
-      data = this.model.find({
-        INVOICE_DATE: {
-          $gte: startDate ? startDate : new Date(0),
-          $lte: endDate ? endDate : new Date(),
-        },
-        INVOICE_ID: invoce ? invoce : null,
-      });
+      const newStartDate = params.startDate
+        ? params.startDate
+        : new Date(new Date().setDate(1));
+      const newEndDate = params.endDate ? params.endDate : new Date();
+      if (params.invoiceID) {
+        const idInvoice = Number(params.invoiceID);
+        data = await this.model.find({
+          INVOICE_DATE: {
+            $gte: newStartDate,
+            $lte: newEndDate,
+          },
+          VENDOR_ID: idInvoice,
+        });
+      } else {
+        data = await this.model.find({
+          INVOICE_DATE: {
+            $gte: newStartDate,
+            $lte: newEndDate,
+          },
+        });
+      }
     }
-    if (currency) {
+    if (params.currency) {
+      for (const invoice of data) {
+        if (invoice.CURRENCY != params.currency) {
+          this.convertCurrency(
+            invoice.INVOICE_TOTAL,
+            invoice.CURRENCY,
+            params.currency,
+          );
+        }
+      }
+
       //aplicamos el cambio en la moneda entregada en cada uno de los elementos los agregamos a records
     } else {
-      //creamos los recordsI los agregamos y los enviamos
-    }
-    return record;
-  }
-
-  private removeFile(path: string) {
-    fs.unlink(path, (err) => {
-      if (err) {
-        this.logger.error(err.message);
+      for (const invoice of data) {
+        const newRecord: RecordsI = {
+          invoiceID: invoice.INVOICE_ID,
+          vendorID: invoice.VENDOR_ID,
+          invoiceNumber: invoice.INVOICE_NUMBER,
+          invoiceTotal: invoice.INVOICE_TOTAL,
+          paymentTotal: invoice.PAYMENT_TOTAL,
+          creditTotal: invoice.CREDIT_TOTAL,
+          bankID: invoice.BANK_ID,
+        };
+        records.push(newRecord);
       }
-    });
+    }
+    return records;
   }
 }
