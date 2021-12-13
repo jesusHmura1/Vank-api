@@ -13,6 +13,7 @@ async function bootstrap() {
     .setTitle('Document Bank API')
     .setDescription('documentation for bank api')
     .setVersion('1.0.0')
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, options);
 
