@@ -10,6 +10,7 @@ import { InvoiceReport } from './entity/invoice.entity';
 import { RecordsI } from 'src/common/interface/records.interface';
 import { InvoiceReportDTO } from './dto/invoice.report.dto';
 import axios from 'axios';
+import { InvoiceCurrencyI } from 'src/common/interface/invoice.currency.interface';
 
 @Injectable()
 export class InvoicesService {
@@ -18,7 +19,11 @@ export class InvoicesService {
     @InjectModel(VANKINVOICES.name) private readonly model: Model<InvoicesI>,
   ) {}
 
-  async convertCurrency(amount, fromCurrency, toCurrency): Promise<any> {
+  async convertCurrency(
+    amount,
+    fromCurrency,
+    toCurrency,
+  ): Promise<InvoiceCurrencyI> {
     const apiKey = process.env.API_KEY;
 
     fromCurrency = encodeURIComponent(fromCurrency);
@@ -28,32 +33,43 @@ export class InvoicesService {
     const url = `https://api.currconv.com/api/v7/convert?q=${query}&compact=ultra&apiKey=${apiKey}`;
     console.log(url);
 
-    const { data } = await axios.get(url);
-    console.log(data);
+    let invoiceCurrency: InvoiceCurrencyI = {
+      status: false,
+      amount: 0,
+    };
 
-    let body = '';
-    data.on('data', function (chunk) {
-      body += chunk;
-    });
+    try {
+      const { data } = await axios.get(url);
+      console.log(data);
 
-    data.on('end', function () {
-      try {
-        const jsonObj = JSON.parse(body);
+      let body = '';
+      data.on('data', function (chunk) {
+        body += chunk;
+      });
 
-        const val = jsonObj[query];
-        if (val) {
-          const total = val * amount;
-          return Math.round(total * 100) / 100;
-        } else {
-          const err = new Error('Value not found for ' + query);
-          console.log(err);
-          this.logger.log(`parser error: ${err}`);
+      data.on('end', function () {
+        try {
+          const jsonObj = JSON.parse(body);
+
+          const val = jsonObj[query];
+          if (val) {
+            const total = val * amount;
+            invoiceCurrency.status = true;
+            invoiceCurrency.amount = Math.round(total * 100) / 100;
+            return invoiceCurrency;
+          } else {
+            const err = new Error('Value not found for ' + query);
+            this.logger.log(`parser error: ${err}`);
+            return invoiceCurrency;
+          }
+        } catch (e) {
+          this.logger.log(`parser error: ${e}`);
+          return invoiceCurrency;
         }
-      } catch (e) {
-        console.log('Parse error: ', e);
-        this.logger.log(`parser error: ${e}`);
-      }
-    });
+      });
+    } catch {
+      return invoiceCurrency;
+    }
   }
 
   async generateInvoicesFromCSV(): Promise<any> {
@@ -218,15 +234,26 @@ export class InvoicesService {
     if (params.currency) {
       for (const invoice of data) {
         if (invoice.CURRENCY != params.currency) {
-          this.convertCurrency(
+          const data: InvoiceCurrencyI = await this.convertCurrency(
             invoice.INVOICE_TOTAL,
             invoice.CURRENCY,
             params.currency,
           );
+          if (data.status) {
+            invoice.INVOICE_TOTAL = data.amount;
+          }
         }
+        const newRecord: RecordsI = {
+          invoiceID: invoice.INVOICE_ID,
+          vendorID: invoice.VENDOR_ID,
+          invoiceNumber: invoice.INVOICE_NUMBER,
+          invoiceTotal: invoice.INVOICE_TOTAL,
+          paymentTotal: invoice.PAYMENT_TOTAL,
+          creditTotal: invoice.CREDIT_TOTAL,
+          bankID: invoice.BANK_ID,
+        };
+        records.push(newRecord);
       }
-
-      //aplicamos el cambio en la moneda entregada en cada uno de los elementos los agregamos a records
     } else {
       for (const invoice of data) {
         const newRecord: RecordsI = {
