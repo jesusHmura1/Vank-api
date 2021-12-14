@@ -44,13 +44,13 @@ export class InvoicesController {
     description: 'invoices generated',
     type: InvoiceDTO,
   })
-  createdInvoices(@Body() invoicesDTO: InvoiceDTO) {
+  createdInvoices(@Body() invoicesDTO: InvoiceDTO, @Res() res) {
     const invoice = this.invoceService.created(invoicesDTO);
-    return {
-      statCode: HttpStatus.OK,
-      message: 'generated',
+    return res.status(HttpStatus.OK).json({
+      statusCode: HttpStatus.OK,
+      message: 'OK',
       data: invoice,
-    };
+    });
   }
 
   @Post('invoices/record')
