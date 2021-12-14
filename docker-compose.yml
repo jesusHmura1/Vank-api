@@ -1,0 +1,38 @@
+version: '3.7'
+
+services:
+  app:
+    image: app_vank:v2
+    container_name: app_vank_api
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    env_file: .env.development
+    ports:
+      - 80:3000
+    depends_on:
+      - mongodb
+    restart: always
+    networks:
+      - ms_nestjs 
+  
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    environment:
+      - MONGO_DATA_DIR=/data/db
+      - MONGO_LOG_DIR=/dev/null
+    volumes:
+      - mongodb:/data/db
+    expose:
+      - 27017
+    networks:
+      - ms_nestjs
+
+volumes:
+  mongodb:
+  
+networks:
+  ms_nestjs:
+
