@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserDTO } from 'src/user/dto/user.dto';
 import { UserSignInDTO } from 'src/user/dto/user.signin.dto';
@@ -13,7 +13,6 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   @Post('signin')
   async signIn(@Body() req: UserSignInDTO) {
-    console.log(req.username);
     return await this.authService.signIn(req.username);
   }
 
